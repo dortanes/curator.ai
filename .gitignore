@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Database
+server/prisma/*.db
+server/prisma/*.db-journal
+
+# Uploads (runtime user data)
+server/uploads/
+
+# Stencil (auto-generated)
+client/www/
+client/.stencil/
+client/src/components.d.ts
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Misc
+data/

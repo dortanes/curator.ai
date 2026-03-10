@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Source {
+  id        Int       @id @default(autoincrement())
+  type      String    // "telegram" | "rss"
+  name      String
+  config    Json      // TelegramSourceConfig | RssSourceConfig
+  enabled   Boolean   @default(true)
+  channelId Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  channel        Channel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  filters        Filter[]
+  collectedPosts CollectedPost[]
+}
+
+model Filter {
+  id        Int      @id @default(autoincrement())
+  sourceId  Int?
+  type      String   // "include_keyword" | "exclude_keyword" | "exclude_author"
+  value     String
+  createdAt DateTime @default(now())
+
+  source Source? @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+}
+
+model CollectedPost {
+  id           Int       @id @default(autoincrement())
+  sourceId     Int
+  sourcePostId String
+  title        String?
+  content      String
+  url          String?
+  mediaUrls    Json      @default("[]") // string[]
+  author       String?
+  publishedAt  DateTime?
+  collectedAt  DateTime  @default(now())
+  processed    Boolean   @default(false)
+
+  source     Source      @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  queueItems QueueItem[]
+
+  @@unique([sourceId, sourcePostId])
+}
+
+model QueueItem {
+  id               Int       @id @default(autoincrement())
+  postId           Int
+  rewrittenContent String
+  imageUrl         String?
+  status           String    @default("draft") // "draft" | "approved" | "scheduled" | "published" | "rejected"
+  scheduledAt      DateTime?
+  publishedAt      DateTime?
+  channelId        Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  post    CollectedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  channel Channel?      @relation(fields: [channelId], references: [id], onDelete: SetNull)
+}
+
+model Channel {
+  id             Int         @id @default(autoincrement())
+  name           String
+  telegramChatId String      @unique
+  language       String      @default("en")
+  systemPrompt   String      @default("")
+  filterSystemPrompt String   @default("")
+  createdAt      DateTime    @default(now())
+
+  queueItems QueueItem[]
+  sources    Source[]
+}
+
+model Setting {
+  key   String @id
+  value String
+}

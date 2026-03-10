@@ -1,0 +1,52 @@
+services:
+  postgres:
+    container_name: curator-postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-curator}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-curator}
+      POSTGRES_DB: ${POSTGRES_DB:-curator}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-curator}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    container_name: curator-server
+    image: node:22-slim
+    working_dir: /app/server
+    command: sh -c "cd /app/shared && npm run build && cd /app/server && npm install && npx prisma generate && npx prisma db push --skip-generate && npm run dev"
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./shared:/app/shared
+      - ./server:/app/server
+
+  client:
+    container_name: curator-client
+    image: node:22-slim
+    working_dir: /app/client
+    command: sh -c "cd /app/shared && npm run build && cd /app/client && npm run dev"
+    ports:
+      - "3333:3333"
+    restart: on-failure
+    volumes:
+      - ./shared:/app/shared
+      - ./client:/app/client
+
+volumes:
+  pgdata:

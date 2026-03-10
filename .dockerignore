@@ -1,0 +1,16 @@
+node_modules
+dist
+www
+.stencil
+.git
+*.log
+*.md
+LICENSE
+.vscode
+.idea
+.env
+.env.*
+data
+uploads
+prisma/*.db
+prisma/*.db-journal
