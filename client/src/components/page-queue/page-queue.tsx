@@ -23,7 +23,7 @@ export class PageQueue {
   @State() counts: QueueStatusCounts = { all: 0, draft: 0, approved: 0, scheduled: 0, published: 0, rejected: 0 };
   @State() channels: Channel[] = [];
   @State() loading = true;
-  @State() activeTab = "";
+  @State() activeTab = "draft";
   @State() searchQuery = "";
   @State() editingId: number | null = null;
   @State() editContent = "";
