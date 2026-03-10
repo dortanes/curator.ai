@@ -27,9 +27,11 @@ import type {
 } from "@curator/shared";
 import { Env } from "@stencil/core";
 
+const protocol = Env.BACKEND_PROTOCOL || "http";
+const host = Env.BACKEND_HOST || "localhost";
 const port = Env.BACKEND_PORT || "1532";
-export const API_BASE = `http://localhost:${port}/api`;
-export const SERVER_BASE = `http://localhost:${port}`;
+export const API_BASE = `${protocol}://${host}:${port}/api`;
+export const SERVER_BASE = `${protocol}://${host}:${port}`;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

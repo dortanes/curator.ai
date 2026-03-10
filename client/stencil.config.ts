@@ -12,6 +12,8 @@ export const config: Config = {
     })
   ],
   env: {
+    BACKEND_PROTOCOL: process.env.PROTOCOL || "http",
+    BACKEND_HOST: process.env.HOST || "localhost",
     BACKEND_PORT: process.env.PORT || "1532",
   },
   outputTargets: [
