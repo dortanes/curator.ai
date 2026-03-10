@@ -201,7 +201,7 @@ export class PagePosts {
                       <div class="flex items-center gap-3">
                         <span class="text-xs text-neutral-600 font-mono">#{post.id}</span>
                         <span class="text-xs text-neutral-500" title={new Date(post.collectedAt).toLocaleString()}>
-                          {this.timeAgo(post.collectedAt)}
+                          {new Date(post.collectedAt).toLocaleString()}
                         </span>
                       </div>
                     </div>
