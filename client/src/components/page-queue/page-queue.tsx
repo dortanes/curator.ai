@@ -68,7 +68,19 @@ export class PageQueue {
         this.filterSourceId ?? undefined,
         this.filterChannelId ?? undefined,
       );
-      this.items = result.items;
+      this.items = result.items.sort((a, b) => {
+        const dateA = a.status === "scheduled" && a.scheduledAt
+          ? a.scheduledAt
+          : a.status === "published" && a.publishedAt
+            ? a.publishedAt
+            : a.createdAt;
+        const dateB = b.status === "scheduled" && b.scheduledAt
+          ? b.scheduledAt
+          : b.status === "published" && b.publishedAt
+            ? b.publishedAt
+            : b.createdAt;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
       this.counts = result.counts;
       this.totalItems = this.getCountForTab(this.activeTab);
     } catch (err) {
