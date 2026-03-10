@@ -30,7 +30,7 @@ export class RssCollector {
       }));
     } catch (err) {
       console.error(`[RssCollector] Error fetching ${config.feedUrl}:`, err);
-      return [];
+      throw err;
     }
   }
 }

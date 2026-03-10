@@ -18,6 +18,7 @@ export class PipelineService {
   private _lastError: string | null = null;
   private _stage: string = "idle";
   private _lastRunAt: string | null = null;
+  private _collectErrors: { source: string; error: string }[] = [];
 
   constructor(
     private prisma: PrismaClient,
@@ -37,6 +38,7 @@ export class PipelineService {
       lastError: this._lastError,
       lastRunAt: this._lastRunAt,
       stage: this._stage,
+      collectErrors: this._collectErrors,
     };
   }
 
@@ -71,6 +73,7 @@ export class PipelineService {
 
   private async runCycle(): Promise<void> {
     this._stage = "collecting";
+    this._collectErrors = [];
     console.log("[Pipeline] Starting collection cycle...");
 
     // Get all channels with their sources
@@ -94,7 +97,9 @@ export class PipelineService {
             config: source.config as Record<string, unknown>,
           });
         } catch (err) {
-          console.error(`[Pipeline] Error collecting from "${source.name}" (channel "${channel.name}"):`, err);
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[Pipeline] Error collecting from "${source.name}" (channel "${channel.name}"):`, msg);
+          this._collectErrors.push({ source: source.name, error: msg });
         }
       }
     }
@@ -110,7 +115,7 @@ export class PipelineService {
       const unprocessed = await this.prisma.collectedPost.findMany({
         where: { processed: false, sourceId: { in: sourceIds } },
         orderBy: { collectedAt: "desc" },
-        take: 50,
+        take: 30,
       });
 
       if (unprocessed.length === 0) {
@@ -181,16 +186,17 @@ export class PipelineService {
         }
       }
 
-      // Delete rejected posts (filtered out by AI)
+      // Mark rejected posts as processed so they are not re-collected
       const rejectedIds = unprocessed
         .filter((p) => !relevantIds.includes(p.id))
         .map((p) => p.id);
 
       if (rejectedIds.length > 0) {
-        await this.prisma.collectedPost.deleteMany({
+        await this.prisma.collectedPost.updateMany({
           where: { id: { in: rejectedIds } },
+          data: { processed: true },
         });
-        console.log(`[Pipeline] Deleted ${rejectedIds.length} filtered-out posts.`);
+        console.log(`[Pipeline] Marked ${rejectedIds.length} rejected posts as processed.`);
       }
 
       // Only mark successfully rewritten posts as processed
