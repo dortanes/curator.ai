@@ -472,7 +472,13 @@ export class PageQueue {
         </div>
         <div class="flex items-center gap-3">
           <span class="text-xs text-neutral-600 font-mono">#{item.id}</span>
-          <span class="text-xs text-neutral-500">{new Date(item.createdAt).toLocaleString()}</span>
+          <span class="text-xs text-neutral-500">
+            {item.status === "scheduled" && item.scheduledAt
+              ? `📅 ${new Date(item.scheduledAt).toLocaleString()}`
+              : item.status === "published" && item.publishedAt
+                ? `✅ ${new Date(item.publishedAt).toLocaleString()}`
+                : new Date(item.createdAt).toLocaleString()}
+          </span>
         </div>
       </div>,
 
