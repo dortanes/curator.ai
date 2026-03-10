@@ -15,6 +15,7 @@ export class AppNav {
     { path: "/filters", label: "Filters", icon: "🔍" },
     { path: "/prompts", label: "Prompts", icon: "📄" },
     { path: "/channels", label: "Channels", icon: "📢" },
+    { path: "/logs", label: "Logs", icon: "📋" },
   ];
 
   render() {

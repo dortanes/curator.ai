@@ -22,12 +22,18 @@ import { createDashboardRouter } from "./routes/dashboard.js";
 import { createPipelineRouter } from "./routes/pipeline.js";
 import { createUploadRouter } from "./routes/upload.js";
 import { createPromptsRouter } from "./routes/prompts.js";
+import { createLogsRouter } from "./routes/logs.js";
+import { LogBuffer } from "./services/LogBuffer.js";
 import path from "node:path";
 import fs from "node:fs";
 
-const PORT = parseInt(process.env.PORT || "3000", 10);
+const PORT = parseInt(process.env.PORT || "1532", 10);
 
 async function main() {
+  // ── Log buffer (must be installed first) ──
+  const logBuffer = new LogBuffer();
+  logBuffer.install();
+
   // ── Core dependencies ──────────────────────
   const prisma = new PrismaClient();
   await prisma.$connect();
@@ -72,6 +78,7 @@ async function main() {
   app.use("/api/pipeline", createPipelineRouter(pipelineService, scheduler));
   app.use("/api/upload", createUploadRouter());
   app.use("/api/prompts", createPromptsRouter(promptManager));
+  app.use("/api/logs", createLogsRouter(logBuffer));
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Listening on http://localhost:${PORT}`);

@@ -203,3 +203,16 @@ export interface PipelineStatusResponse {
   stage: string;
   collectIntervalMinutes: number;
 }
+
+// ──────────────────────────────────────────
+// Logs
+// ──────────────────────────────────────────
+
+export interface LogEntry {
+  timestamp: string;
+  level: "info" | "warn" | "error";
+  message: string;
+}
+
+export type LogsResponse = LogEntry[];
+

@@ -14,6 +14,12 @@ interface FilterRule {
  * AI service — wraps the LLM provider. Currently Gemini, easily swappable.
  */
 export class AiService {
+  /**
+   * Valid JSON escape characters after backslash.
+   * Everything else (like \. \! \+ from MarkdownV2) is invalid and must be double-escaped.
+   */
+  private static readonly VALID_JSON_ESCAPES = new Set(['"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u']);
+
   private client: GoogleGenAI;
   private promptManager: PromptManager;
   private lastCallTime = 0;
@@ -39,6 +45,64 @@ export class AiService {
       await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS - elapsed));
     }
     this.lastCallTime = Date.now();
+  }
+
+  /**
+   * Sanitize raw AI response text so it can be safely JSON.parse'd.
+   * - Strips markdown code fences (```json ... ```)
+   * - Fixes invalid JSON escape sequences (e.g. \. \! \+ from MarkdownV2)
+   */
+  private sanitizeJsonResponse(raw: string): string {
+    let text = raw.trim();
+
+    // Strip markdown code fences
+    text = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "");
+
+    // Fix invalid JSON escape sequences inside string values.
+    // We walk through the string and only fix escapes that are inside JSON strings.
+    let result = "";
+    let inString = false;
+    let i = 0;
+    while (i < text.length) {
+      const ch = text[i];
+
+      if (!inString) {
+        if (ch === '"') inString = true;
+        result += ch;
+        i++;
+      } else {
+        // Inside a JSON string
+        if (ch === '\\') {
+          const next = text[i + 1];
+          if (next === undefined) {
+            result += ch;
+            i++;
+          } else if (AiService.VALID_JSON_ESCAPES.has(next)) {
+            // Valid escape — keep as-is
+            result += ch + next;
+            i += 2;
+            // For \uXXXX, consume the 4 hex digits too
+            if (next === 'u') {
+              result += text.slice(i, i + 4);
+              i += 4;
+            }
+          } else {
+            // Invalid escape like \. \! \+ — double-escape it
+            result += '\\\\' + next;
+            i += 2;
+          }
+        } else if (ch === '"') {
+          inString = false;
+          result += ch;
+          i++;
+        } else {
+          result += ch;
+          i++;
+        }
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -103,13 +167,14 @@ export class AiService {
     const raw = response.text?.trim() || "[]";
 
     try {
-      const result = JSON.parse(raw);
+      const sanitized = this.sanitizeJsonResponse(raw);
+      const result = JSON.parse(sanitized);
       if (Array.isArray(result)) {
         return result.map(Number).filter((n) => !isNaN(n));
       }
       return [];
-    } catch {
-      console.error("[AiService] Failed to parse filter response:", raw);
+    } catch (err) {
+      console.error("[AiService] Failed to parse filter response:", err instanceof Error ? err.message : err, raw.slice(0, 300));
       return [];
     }
   }
@@ -209,7 +274,8 @@ export class AiService {
       const raw = response.text?.trim() || "[]";
 
       try {
-        const parsed = JSON.parse(raw);
+        const sanitized = this.sanitizeJsonResponse(raw);
+        const parsed = JSON.parse(sanitized);
         if (Array.isArray(parsed)) {
           for (const item of parsed) {
             if (item.id && item.text) {
@@ -217,8 +283,8 @@ export class AiService {
             }
           }
         }
-      } catch {
-        console.error("[AiService] Failed to parse rewrite response:", raw.slice(0, 200));
+      } catch (err) {
+        console.error("[AiService] Failed to parse rewrite response:", err instanceof Error ? err.message : err, raw.slice(0, 300));
       }
     } catch (err) {
       console.error(`[AiService] Chunk rewrite failed (${posts.length} posts, IDs: [${posts.map((p) => p.id).join(", ")}]):`, err instanceof Error ? err.message : err);

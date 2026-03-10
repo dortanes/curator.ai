@@ -22,6 +22,7 @@ export class AppRoot {
       case "/posts": return <page-posts />;
       case "/channels": return <page-channels />;
       case "/prompts": return <page-prompts />;
+      case "/logs": return <page-logs />;
       default: return <page-dashboard />;
     }
   }

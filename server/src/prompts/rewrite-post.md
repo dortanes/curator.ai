@@ -44,3 +44,5 @@ For example: "50\% скидка", "C\+\+", "версия 2\.0"
 ## Output
 
 Return a JSON array of objects, each with "id" (the original post ID) and "text" (the rewritten post text in Telegram MarkdownV2 format). No explanations, no meta-commentary — only the JSON array.
+
+CRITICAL: Since the output is a JSON string, all backslashes in MarkdownV2 escapes MUST be double-escaped. For example, to produce `2\.0` in the final text, you must write `"2\\.0"` in the JSON value. Similarly `50\%` → `"50\\%"`, `C\+\+` → `"C\\+\\+"`. A single backslash before `.`, `!`, `+` etc. produces an invalid JSON escape sequence.

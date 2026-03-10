@@ -23,9 +23,10 @@ import type {
   DashboardStats,
   PipelineRunResponse,
   PipelineStatusResponse,
+  LogEntry,
 } from "@curator/shared";
 
-const API_BASE = "http://localhost:3000/api";
+const API_BASE = "http://localhost:1532/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -160,4 +161,14 @@ export const promptsApi = {
   list: () => request<PromptData[]>("/prompts"),
   update: (name: string, data: { template: string; model?: string; temperature?: number; description?: string }) =>
     request<{ message: string }>(`/prompts/${name}`, { method: "PUT", body: JSON.stringify(data) }),
+};
+
+// ── Logs ──────────────────────────────────
+
+export const logsApi = {
+  list: (since?: string) => {
+    const query = since ? `?since=${encodeURIComponent(since)}` : "";
+    return request<LogEntry[]>(`/logs${query}`);
+  },
+  clear: () => request<{ message: string }>("/logs", { method: "DELETE" }),
 };

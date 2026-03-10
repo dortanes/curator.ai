@@ -22,7 +22,7 @@ services:
     working_dir: /app/server
     command: sh -c "cd /app/shared && npm run build && cd /app/server && npm install && npx prisma generate && npx prisma db push --skip-generate && npm run dev"
     ports:
-      - "${PORT:-3000}:${PORT:-3000}"
+      - "${PORT:-1532}:${PORT:-1532}"
     env_file:
       - .env
     depends_on:

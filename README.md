@@ -122,7 +122,7 @@ To stop everything: `docker compose down`
 | `POSTGRES_USER`      | PostgreSQL username                       | `curator`   | ✅       |
 | `POSTGRES_PASSWORD`  | PostgreSQL password                       | `changeme`  | ✅       |
 | `POSTGRES_DB`        | PostgreSQL database name                  | `curator`   | ✅       |
-| `PORT`               | Server HTTP port                          | `3000`      | —        |
+| `PORT`               | Server HTTP port                          | `1532`      | —        |
 | `DATABASE_URL`       | Full Prisma connection string             | *composed*  | ✅       |
 
 ## 📁 Project Structure
