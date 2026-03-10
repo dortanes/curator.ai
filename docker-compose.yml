@@ -20,7 +20,7 @@ services:
     container_name: curator-server
     image: node:22-slim
     working_dir: /app/server
-    command: sh -c "cd /app/shared && npm run build && cd /app/server && npm install && npx prisma generate && npx prisma db push --skip-generate && npm run dev"
+    command: sh -c "cd /app/shared && npm install && npm run build && cd /app/server && npm install && npx prisma generate && npx prisma db push --skip-generate && npm run dev"
     ports:
       - "${PORT:-1532}:${PORT:-1532}"
     env_file:
@@ -40,7 +40,7 @@ services:
     container_name: curator-client
     image: node:22-slim
     working_dir: /app/client
-    command: sh -c "cd /app/shared && npm run build && cd /app/client && npm run dev"
+    command: sh -c "cd /app/shared && npm install && npm run build && cd /app/client && npm install && npm run dev"
     ports:
       - "3333:3333"
     env_file:
