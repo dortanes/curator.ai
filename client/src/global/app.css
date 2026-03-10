@@ -11,3 +11,7 @@ body {
 .emoji, body {
   font-family: "Inter", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

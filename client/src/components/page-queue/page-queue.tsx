@@ -1,6 +1,7 @@
 import { Component, h, State } from "@stencil/core";
 import type { QueueItemResponse, QueueStatus, QueueStatusCounts, Channel, CollectedPost, Source } from "@curator/shared";
-import { queueApi, channelsApi, uploadApi, sourcesApi, SERVER_BASE } from "../../services/api";
+import { queueApi, channelsApi, uploadApi, imagesApi, sourcesApi, SERVER_BASE } from "../../services/api";
+import type { ImageSearchResult } from "../../services/api";
 
 const TABS: { key: string; label: string }[] = [
   { key: "", label: "All" },
@@ -37,9 +38,18 @@ export class PageQueue {
   @State() totalItems = 0;
   @State() sources: Source[] = [];
   @State() filterSourceId: number | null = null;
+  @State() imageSearchOpen = false;
+  @State() imageSearchQuery = "";
+  @State() imageSearchResults: ImageSearchResult[] = [];
+  @State() imageSearchLoading = false;
+  @State() imageSearchLoadingMore = false;
+  @State() imageSearchPage = 0;
+  @State() imageSearchHasMore = true;
+  @State() imageDownloadingUrl: string | null = null;
 
   private pollTimer?: ReturnType<typeof setInterval>;
   private searchTimer?: ReturnType<typeof setTimeout>;
+  private imageSearchTimer?: ReturnType<typeof setTimeout>;
 
   async componentWillLoad() {
     const [, channels] = await Promise.all([
@@ -58,6 +68,7 @@ export class PageQueue {
   disconnectedCallback() {
     if (this.pollTimer) clearInterval(this.pollTimer);
     if (this.searchTimer) clearTimeout(this.searchTimer);
+    if (this.imageSearchTimer) clearTimeout(this.imageSearchTimer);
   }
 
   private async reload() {
@@ -253,6 +264,86 @@ export class PageQueue {
   private async removeImage(itemId: number) {
     await queueApi.update(itemId, { imageUrl: null });
     await this.reload();
+  }
+
+  /* ── Image Search ────────────────────── */
+
+  private toggleImageSearch() {
+    this.imageSearchOpen = !this.imageSearchOpen;
+    if (!this.imageSearchOpen) {
+      this.imageSearchResults = [];
+      this.imageSearchQuery = "";
+      this.imageSearchPage = 0;
+      this.imageSearchHasMore = true;
+    }
+  }
+
+  private onImageSearchInput(val: string) {
+    this.imageSearchQuery = val;
+    if (this.imageSearchTimer) clearTimeout(this.imageSearchTimer);
+    if (!val.trim()) {
+      this.imageSearchResults = [];
+      this.imageSearchPage = 0;
+      this.imageSearchHasMore = true;
+      return;
+    }
+    this.imageSearchTimer = setTimeout(() => this.runImageSearch(false), 500);
+  }
+
+  private async runImageSearch(loadMore: boolean) {
+    if (!this.imageSearchQuery.trim()) return;
+    if (loadMore) {
+      this.imageSearchLoadingMore = true;
+    } else {
+      this.imageSearchLoading = true;
+      this.imageSearchPage = 0;
+      this.imageSearchHasMore = true;
+    }
+    try {
+      const page = loadMore ? this.imageSearchPage + 1 : 0;
+      const result = await imagesApi.search(this.imageSearchQuery, page);
+      if (loadMore) {
+        this.imageSearchResults = [...this.imageSearchResults, ...result.images];
+      } else {
+        this.imageSearchResults = result.images;
+      }
+      this.imageSearchPage = page;
+      this.imageSearchHasMore = result.images.length >= 10;
+    } catch (err) {
+      console.error("[ImageSearch] Failed:", err);
+      if (!loadMore) this.imageSearchResults = [];
+      this.imageSearchHasMore = false;
+    } finally {
+      this.imageSearchLoading = false;
+      this.imageSearchLoadingMore = false;
+    }
+  }
+
+  private handleImageGridScroll(e: Event) {
+    const el = e.target as HTMLElement;
+    if (
+      !this.imageSearchLoadingMore &&
+      this.imageSearchHasMore &&
+      el.scrollTop + el.clientHeight >= el.scrollHeight - 40
+    ) {
+      this.runImageSearch(true);
+    }
+  }
+
+  private async selectSearchImage(imageUrl: string, itemId: number) {
+    this.imageDownloadingUrl = imageUrl;
+    try {
+      const { url } = await imagesApi.download(imageUrl);
+      await queueApi.update(itemId, { imageUrl: url });
+      this.imageSearchOpen = false;
+      this.imageSearchResults = [];
+      this.imageSearchQuery = "";
+      await this.reload();
+    } catch (err) {
+      console.error("[ImageSearch] Download failed:", err);
+    } finally {
+      this.imageDownloadingUrl = null;
+    }
   }
 
   /* ── Helpers ─────────────────────────── */
@@ -644,6 +735,17 @@ export class PageQueue {
               }}
             />
           </label>
+
+          <button
+            class={`rounded-md border py-1.5 px-3 text-xs font-medium transition-colors ${
+              this.imageSearchOpen
+                ? "border-indigo-500/50 text-indigo-400 bg-indigo-500/10"
+                : "border-neutral-600 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300"
+            }`}
+            onClick={() => this.toggleImageSearch()}
+          >
+            🔍 Search
+          </button>
           
           {item.imageUrl && (
             <div class="flex items-center gap-2 px-2 py-1 rounded-md bg-neutral-700/50 border border-neutral-600">
@@ -668,6 +770,82 @@ export class PageQueue {
           </button>
         </div>
       </div>,
+
+      /* Image search panel */
+      this.imageSearchOpen && (
+        <div class="px-5 py-4 border-t border-neutral-700/40 bg-neutral-900/50">
+          <div class="relative mb-4">
+            <span class="material-icons-outlined text-base absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">image_search</span>
+            <input
+              class="w-full bg-neutral-800 border border-neutral-700 text-neutral-200 placeholder:text-neutral-500 text-sm rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors"
+              type="text"
+              placeholder="Search for images..."
+              value={this.imageSearchQuery}
+              onInput={(e) => this.onImageSearchInput((e.target as HTMLInputElement).value)}
+            />
+          </div>
+
+          {this.imageSearchLoading && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "32px 0" }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "24px",
+                  height: "24px",
+                  border: "3px solid #6366f1",
+                  borderTopColor: "transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                }}
+              ></span>
+              <span style={{ fontSize: "14px", color: "#a1a1aa" }}>Searching...</span>
+            </div>
+          )}
+
+          {!this.imageSearchLoading && this.imageSearchResults.length > 0 && (
+            <div
+              class="max-h-72 overflow-y-auto rounded-lg"
+              onScroll={(e) => this.handleImageGridScroll(e)}
+            >
+              <div class="grid grid-cols-4 gap-2">
+                {this.imageSearchResults.map((img) => (
+                  <button
+                    class={`relative group rounded-lg overflow-hidden border border-neutral-700 hover:border-indigo-500 transition-all aspect-video bg-neutral-800 ${
+                      this.imageDownloadingUrl === img.url ? "opacity-50 pointer-events-none" : ""
+                    }`}
+                    onClick={() => this.selectSearchImage(img.url, item.id)}
+                    title="Click to attach"
+                  >
+                    <img
+                      src={img.url}
+                      alt=""
+                      class="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    {this.imageDownloadingUrl === img.url && (
+                      <div class="absolute inset-0 flex items-center justify-center bg-neutral-900/70">
+                        <span style={{ display: "inline-block", width: "20px", height: "20px", border: "3px solid #818cf8", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}></span>
+                      </div>
+                    )}
+                    <div class="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/20 transition-colors flex items-center justify-center">
+                      <span class="material-icons-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl drop-shadow-lg">add_circle</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {this.imageSearchLoadingMore && (
+                <div class="flex justify-center py-3">
+                  <span style={{ display: "inline-block", width: "20px", height: "20px", border: "3px solid #818cf8", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}></span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!this.imageSearchLoading && this.imageSearchQuery && this.imageSearchResults.length === 0 && (
+            <p class="text-center text-neutral-500 text-sm py-4">No images found. Try a different query.</p>
+          )}
+        </div>
+      ),
     ];
   }
 }

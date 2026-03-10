@@ -23,6 +23,7 @@ import { createPipelineRouter } from "./routes/pipeline.js";
 import { createUploadRouter } from "./routes/upload.js";
 import { createPromptsRouter } from "./routes/prompts.js";
 import { createLogsRouter } from "./routes/logs.js";
+import { createImagesRouter } from "./routes/images.js";
 import { LogBuffer } from "./services/LogBuffer.js";
 import path from "node:path";
 import fs from "node:fs";
@@ -79,6 +80,7 @@ async function main() {
   app.use("/api/upload", createUploadRouter());
   app.use("/api/prompts", createPromptsRouter(promptManager));
   app.use("/api/logs", createLogsRouter(logBuffer));
+  app.use("/api/images", createImagesRouter());
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Listening on http://localhost:${PORT}`);

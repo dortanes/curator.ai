@@ -106,6 +106,21 @@ export const queueApi = {
     request<null>("/queue/bulk", { method: "POST", body: JSON.stringify({ ids, status }) }),
 };
 
+// ── Images ────────────────────────────────
+
+export interface ImageSearchResult {
+  url: string;
+  width: number;
+  height: number;
+}
+
+export const imagesApi = {
+  search: (query: string, page = 0) =>
+    request<{ images: ImageSearchResult[] }>(`/images/search?q=${encodeURIComponent(query)}&page=${page}`),
+  download: (url: string) =>
+    request<{ url: string }>("/images/download", { method: "POST", body: JSON.stringify({ url }) }),
+};
+
 // ── Upload ────────────────────────────────
 
 export const uploadApi = {
