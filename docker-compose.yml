@@ -43,6 +43,8 @@ services:
     command: sh -c "cd /app/shared && npm run build && cd /app/client && npm run dev"
     ports:
       - "3333:3333"
+    env_file:
+      - .env
     restart: on-failure
     volumes:
       - ./shared:/app/shared

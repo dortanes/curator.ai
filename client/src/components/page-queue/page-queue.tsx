@@ -1,6 +1,6 @@
 import { Component, h, State } from "@stencil/core";
 import type { QueueItemResponse, QueueStatus, QueueStatusCounts, Channel, CollectedPost, Source } from "@curator/shared";
-import { queueApi, channelsApi, uploadApi, sourcesApi } from "../../services/api";
+import { queueApi, channelsApi, uploadApi, sourcesApi, SERVER_BASE } from "../../services/api";
 
 const TABS: { key: string; label: string }[] = [
   { key: "", label: "All" },
@@ -175,12 +175,7 @@ export class PageQueue {
 
   private async deleteItem(id: number) {
     try {
-      const res = await fetch(`http://localhost:1532/api/queue/${id}`, { method: "DELETE" });
-      const body = await res.json() as { success: boolean; error?: string };
-      if (!body.success) {
-        console.error("[Queue] Delete error:", body.error);
-        return;
-      }
+      await queueApi.delete(id);
     } catch (err) {
       console.error("[Queue] Delete failed:", err);
       return;
@@ -219,7 +214,7 @@ export class PageQueue {
     const ids = [...this.selectedIds];
     for (const id of ids) {
       try {
-        await fetch(`http://localhost:1532/api/queue/${id}`, { method: "DELETE" });
+        await queueApi.delete(id);
       } catch (err) {
         console.error(`[Queue] Failed to delete #${id}:`, err);
       }
@@ -490,7 +485,7 @@ export class PageQueue {
       item.imageUrl && (
         <div class="px-5 pb-4">
           <div class="relative group inline-block rounded-lg overflow-hidden border border-neutral-700">
-            <img src={`http://localhost:1532${item.imageUrl}`} alt="" class="w-32 h-24 object-cover" />
+            <img src={`${SERVER_BASE}${item.imageUrl}`} alt="" class="w-32 h-24 object-cover" />
             <button
               class="absolute inset-0 bg-neutral-900/80 text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={() => this.removeImage(item.id)}
@@ -634,7 +629,7 @@ export class PageQueue {
           
           {item.imageUrl && (
             <div class="flex items-center gap-2 px-2 py-1 rounded-md bg-neutral-700/50 border border-neutral-600">
-              <img src={`http://localhost:1532${item.imageUrl}`} class="w-8 h-6 object-cover rounded-sm" alt="" />
+              <img src={`${SERVER_BASE}${item.imageUrl}`} class="w-8 h-6 object-cover rounded-sm" alt="" />
               <button class="text-neutral-500 hover:text-red-400 transition-colors text-xs" onClick={() => this.removeImage(item.id)} title="Remove">×</button>
             </div>
           )}

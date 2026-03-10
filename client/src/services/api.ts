@@ -25,8 +25,11 @@ import type {
   PipelineStatusResponse,
   LogEntry,
 } from "@curator/shared";
+import { Env } from "@stencil/core";
 
-const API_BASE = "http://localhost:1532/api";
+const port = Env.BACKEND_PORT || "1532";
+export const API_BASE = `http://localhost:${port}/api`;
+export const SERVER_BASE = `http://localhost:${port}`;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

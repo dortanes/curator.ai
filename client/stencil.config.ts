@@ -11,6 +11,9 @@ export const config: Config = {
       plugins: [tailwindcss(), autoprefixer()]
     })
   ],
+  env: {
+    BACKEND_PORT: process.env.PORT || "1532",
+  },
   outputTargets: [
     {
       type: "www",
